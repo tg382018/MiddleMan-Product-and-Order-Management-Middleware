@@ -70,6 +70,114 @@ services:
     ports:
       - "3001:3000"
 
+  middleware-postgres:
+    image: postgres:15
+    container_name: middleware-postgres
+    environment:
+      POSTGRES_DB: middleware_db
+      POSTGRES_USER: middleware
+      POSTGRES_PASSWORD: middleware123
+    ports:
+      - "5434:5432"
+    volumes:
+      - middleware_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: middleware-redis
+    ports:
+      - "6379:6379"
+
+  middleware-api:
+    build:
+      context: ./middleware/api
+      dockerfile: Dockerfile
+    container_name: middleware-api
+    depends_on:
+      - middleware-postgres
+      - redis
+      - rabbitmq
+      - company-erp
+    environment:
+      PORT: "3002"
+      NODE_ENV: development
+      LOG_LEVEL: info
+      COMPANY_ERP_BASE_URL: http://company-erp:3000
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: company.events
+      REDIS_URL: redis://redis:6379
+      MW_DB_HOST: middleware-postgres
+      MW_DB_PORT: "5432"
+      MW_DB_USER: middleware
+      MW_DB_PASS: middleware123
+      MW_DB_NAME: middleware_db
+      MW_DB_SYNC: "true"
+      CRON_PRODUCTS: "*/30 * * * *"
+    ports:
+      - "3002:3002"
+
+  middleware-web:
+    build:
+      context: ./middleware/web
+      dockerfile: Dockerfile
+    container_name: middleware-web
+    depends_on:
+      - middleware-api
+    environment:
+      # Server-side proxy in Next route handler uses this
+      MIDDLEWARE_API_INTERNAL_URL: http://middleware-api:3002
+    ports:
+      - "3003:3000"
+
+  logistics-postgres:
+    image: postgres:15
+    container_name: logistics-postgres
+    environment:
+      POSTGRES_DB: logistics_db
+      POSTGRES_USER: logistics
+      POSTGRES_PASSWORD: logistics123
+    ports:
+      - "5435:5432"
+    volumes:
+      - logistics_pgdata:/var/lib/postgresql/data
+
+  logistics-api:
+    build:
+      context: ./logistics/api
+      dockerfile: Dockerfile
+    container_name: logistics-api
+    depends_on:
+      - logistics-postgres
+      - rabbitmq
+      - middleware-api
+    environment:
+      PORT: "3000"
+      DB_HOST: logistics-postgres
+      DB_PORT: "5432"
+      DB_USER: logistics
+      DB_PASS: logistics123
+      DB_NAME: logistics_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_EXCHANGE: company.events
+      MIDDLEWARE_API_URL: http://middleware-api:3002
+    ports:
+      - "3004:3000"
+
+  logistics-web:
+    build:
+      context: ./logistics/web
+      dockerfile: Dockerfile
+    container_name: logistics-web
+    depends_on:
+      - logistics-api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3004
+      LOGISTICS_API_INTERNAL_URL: http://logistics-api:3000
+    ports:
+      - "3005:3000"
+
 volumes:
   company_pgdata:
   minio_data:
+  middleware_pgdata:
+  logistics_pgdata:

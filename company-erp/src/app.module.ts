@@ -6,12 +6,14 @@ import { MessagingModule } from './modules/messaging/messaging.module';
 import { MinioModule } from './modules/minio/minio.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { ProductsModule } from './modules/products/products.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
     ProductsModule,
     OrdersModule,
     MessagingModule,
+    UsersModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       // When in docker-compose, DB_HOST is "postgres"; local dev defaults to localhost:5433.
@@ -32,4 +34,4 @@ import { ProductsModule } from './modules/products/products.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

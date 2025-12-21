@@ -9,6 +9,19 @@ import {
 } from 'typeorm';
 import { OrderItem } from './order-item.entity';
 import { OrderStatus } from './order-status.enum';
+import { User } from '../users/user.entity';
+import { ManyToOne, JoinColumn } from 'typeorm';
+
+export type ShippingAddress = {
+  fullName: string;
+  phone?: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  postalCode?: string;
+  country: string;
+};
 
 @Entity('orders')
 export class Order {
@@ -21,8 +34,22 @@ export class Order {
   @Column('decimal', { precision: 12, scale: 2, default: 0 })
   totalAmount: number;
 
+  /**
+   * Order-level shipping address.
+   * (This is intentionally not per-item; 99% of B2B flows ship per order.)
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  shippingAddress?: ShippingAddress | null;
+
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: ['insert'] })
   items: OrderItem[];
+
+  @Column({ type: 'uuid', nullable: true })
+  userId: string;
+
+  @ManyToOne(() => User, (user) => user.orders)
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @CreateDateColumn()
   createdAt: Date;

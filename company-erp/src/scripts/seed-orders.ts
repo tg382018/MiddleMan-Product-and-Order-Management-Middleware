@@ -3,8 +3,11 @@ import { AppModule } from '../app.module';
 import { OrdersService } from '../modules/orders/orders.service';
 import { ProductsService } from '../modules/products/products.service';
 import { getArgNumber, pickOne, randInt, sleep } from './seed-utils';
+import { User } from '../modules/users/user.entity';
+import { Repository } from 'typeorm';
 
 type ProductLite = { id: string; stock: number };
+
 
 async function main() {
   const count = getArgNumber('count', 500);
@@ -24,6 +27,13 @@ async function main() {
 
     if (!available.length) {
       console.log('No products with stock found. Seed products first.');
+      return;
+    }
+
+    const userRepo = app.get<Repository<User>>('UserRepository');
+    const users = await userRepo.find();
+    if (!users.length) {
+      console.log('No users found. Seed users first.');
       return;
     }
 
@@ -53,7 +63,8 @@ async function main() {
       }
 
       try {
-        await ordersService.create({ items });
+        const user = pickOne(users);
+        await ordersService.create({ items, userId: user.id });
         created++;
         if (created % 25 === 0) {
           console.log(`Created ${created}/${count} orders... (attempts=${attempts})`);

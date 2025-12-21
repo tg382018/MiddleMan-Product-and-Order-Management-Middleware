@@ -7,6 +7,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItem } from './order-item.entity';
 import { OrderStatus } from './order-status.enum';
 import { Order } from './order.entity';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class OrdersService {
@@ -19,7 +20,9 @@ export class OrdersService {
     private readonly orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
-  ) {}
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+  ) { }
 
   async create(dto: CreateOrderDto) {
     if (!dto.items?.length) {
@@ -62,9 +65,16 @@ export class OrdersService {
       }
       await manager.getRepository(Product).save(products);
 
+      const user = await manager.getRepository(User).findOne({ where: { id: dto.userId } });
+      if (!user) {
+        throw new NotFoundException(`User with ID ${dto.userId} not found`);
+      }
+
       const order = manager.getRepository(Order).create({
         status: OrderStatus.CREATED,
         totalAmount: 0,
+        userId: user.id,
+        shippingAddress: dto.shippingAddress ?? user.address,
         items: [],
       });
 
