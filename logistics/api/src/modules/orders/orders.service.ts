@@ -67,7 +67,7 @@ export class OrdersService {
         try {
             const middlewareUrl = process.env.MIDDLEWARE_API_URL ?? 'http://middleware-api:3002';
             await firstValueFrom(
-                this.httpService.post(`${middlewareUrl}/logistics/status-update/${order.middlewareOrderId}`, {
+                this.httpService.post(`${middlewareUrl}/api/logistics/status-update/${order.middlewareOrderId}`, {
                     status: order.status,
                 }),
             );

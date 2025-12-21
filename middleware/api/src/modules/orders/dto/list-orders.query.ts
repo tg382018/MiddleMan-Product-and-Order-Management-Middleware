@@ -22,6 +22,11 @@ export class ListOrdersQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by order stage', example: 'ERP' })
+  @IsOptional()
+  @IsString()
+  stage?: string;
 }
 
 
