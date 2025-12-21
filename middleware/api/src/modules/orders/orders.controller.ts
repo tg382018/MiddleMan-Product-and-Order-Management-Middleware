@@ -14,12 +14,18 @@ export class OrdersController {
       page: query.page ?? 1,
       limit: query.limit ?? 20,
       search: query.search,
+      stage: query.stage,
     });
   }
 
   @Post(':id/send-to-logistics')
   sendToLogistics(@Param('id') id: string) {
     return this.ordersService.sendToLogistics(id);
+  }
+
+  @Get('stats')
+  getStats() {
+    return this.ordersService.getStats();
   }
 
   @Get('sync')

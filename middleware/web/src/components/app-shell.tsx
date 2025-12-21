@@ -44,11 +44,6 @@ export function AppShell({ children }: PropsWithChildren) {
               isActive={pathname?.startsWith('/orders') ?? false}
             />
             <NavItem
-              href="/logistics"
-              label="Lojistik"
-              isActive={pathname?.startsWith('/logistics') ?? false}
-            />
-            <NavItem
               href="/users"
               label="Kullanıcılar"
               isActive={pathname?.startsWith('/users') ?? false}

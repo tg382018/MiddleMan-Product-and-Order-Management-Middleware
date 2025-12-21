@@ -11,6 +11,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { apiGet, apiPost, MwOrder, PagedResult } from '@/lib/mw-api';
 import { PageHeader } from '@/components/page-header';
 import { StatCards } from '@/components/stat-cards';
+import { io, Socket } from 'socket.io-client';
+
+const LOGISTICS_STATUS_LABELS: Record<string, string> = {
+  PAKET_HAZIRLANIYOR: 'Paket Hazırlanıyor',
+  MERKEZ_SUBEDE: 'Merkez Şubede',
+  SEHIRE_ULASTI: 'Şehre Ulaştı',
+  DAGITIMDA: 'Dağıtımda',
+  TESLIM_EDILDI: 'Teslim Edildi',
+  IPTAL_OLDU: 'İptal Edildi',
+};
+
+const LOGISTICS_STATUS_COLORS: Record<string, string> = {
+  PAKET_HAZIRLANIYOR: 'bg-blue-100 text-blue-700 border-blue-200',
+  MERKEZ_SUBEDE: 'bg-purple-100 text-purple-700 border-purple-200',
+  SEHIRE_ULASTI: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  DAGITIMDA: 'bg-orange-100 text-orange-700 border-orange-200',
+  TESLIM_EDILDI: 'bg-green-100 text-green-700 border-green-200',
+  IPTAL_OLDU: 'bg-red-100 text-red-700 border-red-200',
+};
 
 export default function OrdersPage() {
   const [page, setPage] = useState(1);
@@ -21,6 +40,7 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<MwOrder | null>(null);
+  const [globalStats, setGlobalStats] = useState<any>(null);
 
   const totalPages = useMemo(() => {
     if (!data) return 1;
@@ -36,21 +56,62 @@ export default function OrdersPage() {
       .finally(() => setLoading(false));
   };
 
+  const fetchStats = () => {
+    apiGet<any>('/api/orders/stats')
+      .then(setGlobalStats)
+      .catch((e) => console.error('Failed to load stats', e));
+  };
+
   useEffect(() => {
     refresh();
+    fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, search]);
 
+  useEffect(() => {
+    const socket: Socket = io('http://localhost:3002/logistics');
+
+    socket.on('connect', () => {
+      console.log('Connected to logistics websocket');
+    });
+
+    socket.on('statusUpdated', (payload: { orderId: string; status: string }) => {
+      console.log('Real-time status update received:', payload);
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            item.id === payload.orderId ? { ...item, logisticsStatus: payload.status } : item
+          ),
+        };
+      });
+      // Refresh stats when status changes
+      fetchStats();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
   const stats = useMemo(() => {
-    const total = data?.total ?? 0;
-    const showing = data?.items.length ?? 0;
-    const totalAmount = (data?.items ?? []).reduce((s, o) => s + Number(o.totalAmount || 0), 0);
+    if (!globalStats) {
+      return [
+        { label: 'Toplam Sipariş', value: '0', hint: 'Tüm siparişler' },
+        { label: 'ERP Aşamasında', value: '0', hint: 'Lojistiğe gönderilmemiş' },
+        { label: 'Lojistikte', value: '0', hint: 'Lojistik sürecinde' },
+        { label: 'Satış Toplam TL', value: '0.00', hint: 'Tüm siparişlerin toplamı' },
+      ];
+    }
+
     return [
-      { label: 'Toplam Sipariş', value: String(total), hint: 'ERP listesi (stage=ERP)' },
-      { label: 'Gösterilen', value: String(showing), hint: `Sayfa ${page}` },
-      { label: 'Sayfa Tutarı', value: totalAmount.toFixed(2), hint: 'Bu sayfadaki toplam' },
+      { label: 'Toplam Sipariş', value: String(globalStats.totalOrders), hint: 'Tüm siparişler' },
+      { label: 'ERP Aşamasında', value: String(globalStats.erpStage), hint: 'Lojistiğe gönderilmemiş' },
+      { label: 'Lojistikte', value: String(globalStats.logisticsStage), hint: 'Lojistik sürecinde' },
+      { label: 'Satış Toplam TL', value: globalStats.totalAmount.toFixed(2), hint: 'Tüm siparişlerin toplamı' },
     ];
-  }, [data, page]);
+  }, [globalStats]);
 
   async function sendToLogistics(id: string) {
     setSendingId(id);
@@ -69,7 +130,7 @@ export default function OrdersPage() {
     <div className="space-y-4">
       <PageHeader
         title="Siparişler"
-        subtitle="RabbitMQ event’leriyle gelen siparişler (ERP stage) — lojistiğe göndermek için satırdan aksiyon ver."
+        subtitle="Tüm siparişleri görüntüleyin ve lojistiğe gönderin"
       >
         <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <Input
@@ -102,9 +163,6 @@ export default function OrdersPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="border-b p-4 text-sm text-muted-foreground">
-            “Lojistiğe Gönder” dediğinde sipariş bu listeden çıkar ve “Lojistik” listesine gider.
-          </div>
           {error ? <div className="p-4 text-sm text-destructive">{error}</div> : null}
 
           {loading ? (
@@ -127,6 +185,7 @@ export default function OrdersPage() {
                       <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider">Sipariş</TableHead>
                       <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider">Kullanıcı</TableHead>
                       <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider">Durum</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider">Lojistik</TableHead>
                       <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider text-right">Tutar</TableHead>
                       <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider">Adres</TableHead>
                       <TableHead className="h-9 text-[11px] font-bold uppercase tracking-wider text-right">Aksiyon</TableHead>
@@ -211,6 +270,18 @@ export default function OrdersPage() {
                             {o.status}
                           </Badge>
                         </TableCell>
+                        <TableCell className="py-2">
+                          {o.stage === 'LOGISTICS' && o.logisticsStatus ? (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-2 py-0.5 h-auto font-bold uppercase tracking-tight ${LOGISTICS_STATUS_COLORS[o.logisticsStatus] || 'bg-slate-100'}`}
+                            >
+                              {LOGISTICS_STATUS_LABELS[o.logisticsStatus] || o.logisticsStatus}
+                            </Badge>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="py-2 text-right font-mono text-[12px] font-medium">
                           {Number(o.totalAmount).toFixed(2)}
                         </TableCell>
@@ -227,15 +298,26 @@ export default function OrdersPage() {
                           )}
                         </TableCell>
                         <TableCell className="py-2 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-[11px] font-bold uppercase tracking-tight"
-                            onClick={() => sendToLogistics(o.id)}
-                            disabled={sendingId === o.id}
-                          >
-                            {sendingId === o.id ? 'Gönderiliyor…' : 'Lojistiğe Gönder'}
-                          </Button>
+                          {o.stage === 'LOGISTICS' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px] font-bold uppercase tracking-tight"
+                              disabled
+                            >
+                              Gönderildi
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px] font-bold uppercase tracking-tight"
+                              onClick={() => sendToLogistics(o.id)}
+                              disabled={sendingId === o.id}
+                            >
+                              {sendingId === o.id ? 'Gönderiliyor…' : 'Lojistiğe Gönder'}
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

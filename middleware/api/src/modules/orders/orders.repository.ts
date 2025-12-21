@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { MwOrderItem } from './entities/mw-order-item.entity';
 import { MwOrder, MwOrderStage, MwLogisticsStatus } from './entities/mw-order.entity';
 
@@ -59,14 +59,17 @@ export class OrdersRepository {
   }
 
   async findPaged(params: { page: number; limit: number; search?: string; stage?: MwOrderStage }) {
-    const { page, limit, search, stage = MwOrderStage.ERP } = params;
+    const { page, limit, search, stage } = params;
     const skip = (page - 1) * limit;
 
     const query = this.orders.createQueryBuilder('order')
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('order.user', 'user')
-      .where('order.stage = :stage', { stage })
-      .andWhere('order.erpDeletedAt IS NULL');
+      .where('order.erpDeletedAt IS NULL');
+
+    if (stage) {
+      query.andWhere('order.stage = :stage', { stage });
+    }
 
     if (search) {
       query.andWhere(
@@ -91,6 +94,27 @@ export class OrdersRepository {
     order.logisticsStatus = MwLogisticsStatus.PAKET_HAZIRLANIYOR;
     order.sentToLogisticsAt = new Date();
     return this.orders.save(order);
+  }
+
+  async getGlobalStats() {
+    const [totalOrders, erpStage, logisticsStage] = await Promise.all([
+      this.orders.count({ where: { erpDeletedAt: IsNull() } }),
+      this.orders.count({ where: { stage: MwOrderStage.ERP, erpDeletedAt: IsNull() } }),
+      this.orders.count({ where: { stage: MwOrderStage.LOGISTICS, erpDeletedAt: IsNull() } }),
+    ]);
+
+    const result = await this.orders
+      .createQueryBuilder('order')
+      .select('SUM(CAST(order.totalAmount AS DECIMAL))', 'total')
+      .where('order.erpDeletedAt IS NULL')
+      .getRawOne();
+
+    return {
+      totalOrders,
+      erpStage,
+      logisticsStage,
+      totalAmount: parseFloat(result?.total || '0'),
+    };
   }
 }
 

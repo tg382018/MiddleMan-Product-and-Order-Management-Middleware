@@ -14,8 +14,11 @@ export class OrdersService {
     private readonly logisticsService: LogisticsService,
   ) { }
 
-  async list(params: { page: number; limit: number; search?: string }) {
-    return this.repo.findPaged({ ...params, stage: MwOrderStage.ERP });
+  async list(params: { page: number; limit: number; search?: string; stage?: string }) {
+    return this.repo.findPaged({
+      ...params,
+      stage: params.stage as MwOrderStage | undefined
+    });
   }
 
   async listLogisticsWaiting(params: { page: number; limit: number; search?: string }) {
@@ -29,6 +32,10 @@ export class OrdersService {
       return { ok: true };
     }
     return { ok: false, reason: 'ORDER_NOT_FOUND' };
+  }
+
+  async getStats() {
+    return this.repo.getGlobalStats();
   }
 
   async syncFromErpOnce(limit = 100) {
