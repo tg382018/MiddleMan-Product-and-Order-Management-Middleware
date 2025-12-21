@@ -52,6 +52,7 @@ export type MwOrder = {
   user?: MwUser | null;
   erpUpdatedAt: string;
   erpDeletedAt?: string | null;
+  updatedAt: string;
 };
 
 export type MwUser = {
