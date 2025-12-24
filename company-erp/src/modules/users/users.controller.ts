@@ -42,22 +42,22 @@ export class UsersController {
         }
 
         const rows = await qb.getMany();
-        const ids = rows.map((r) => r.id);
-        if (!ids.length) return { items: [], nextCursor: null };
+        const ids = rows.map((r) => r.id); //user id listesi çıkar
+        if (!ids.length) return { items: [], nextCursor: null }; // liste boşsa null döner
 
         const users = await this.userRepo.find({
-            where: { id: In(ids) },
-            withDeleted: true,
+            where: { id: In(ids) },//idlerle user objeleri gelir
+            withDeleted: true, //silinenlerde gelir
         });
 
-        users.sort((a, b) => {
+        users.sort((a, b) => { //tekrar sıralıyor
             const ta = a.updatedAt.getTime();
             const tb = b.updatedAt.getTime();
             if (ta !== tb) return ta - tb;
             return a.id.localeCompare(b.id);
         });
 
-        const nextCursor =
+        const nextCursor = //cursoru güncelliyor
             users.length === safeLimit
                 ? `${users[users.length - 1].updatedAt.toISOString()}|${users[users.length - 1].id}`
                 : null;

@@ -18,11 +18,13 @@ import { UsersModule } from './modules/users/users.module';
       type: 'postgres',
       // When in docker-compose, DB_HOST is "postgres"; local dev defaults to localhost:5433.
       host: process.env.DB_HOST ?? 'localhost',
+      //DB YE DOCKERDAN MI LOCALDEN MI BAGLANAYIM
       port: process.env.DB_PORT
         ? Number(process.env.DB_PORT)
         : (process.env.DB_HOST ?? 'localhost') === 'localhost'
           ? 5433
           : 5432,
+          //ENV DE PORT VARSA KULLAN , YOKSA ENV HOSTU LOCALHOST ISE 5433 DEGILSE 5432(DOCKER)
       username: process.env.DB_USER ?? 'company',
       password: process.env.DB_PASS ?? 'company123',
       database: process.env.DB_NAME ?? 'company_db',

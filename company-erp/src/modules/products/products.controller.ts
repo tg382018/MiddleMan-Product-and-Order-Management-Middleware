@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { CreateProductDto, UpdateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/create-update-product.dto';
 import { ProductsService } from './products.service';
 
 @Controller('products')
@@ -22,7 +22,7 @@ export class ProductsController {
   @Post()
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: memoryStorage(),
+      storage: memoryStorage(),//ram e yolluyor
       limits: { fileSize: 10 * 1024 * 1024 },
     }),
   )

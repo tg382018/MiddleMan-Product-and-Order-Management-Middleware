@@ -25,16 +25,16 @@ export class OrdersService {
   ) { }
 
   async create(dto: CreateOrderDto) {
-    if (!dto.items?.length) {
+    if (!dto.items?.length) { //siparişte item var mı 
       throw new BadRequestException('Order must contain at least 1 item');
     }
 
     // Merge duplicate productId lines
     const merged = new Map<string, number>();
     for (const item of dto.items) {
-      merged.set(item.productId, (merged.get(item.productId) ?? 0) + item.quantity);
-    }
-    const productIds = Array.from(merged.keys());
+      merged.set(item.productId, (merged.get(item.productId) ?? 0) + item.quantity); //aynı producttan birden fazla sipariş varsa birleştiriyor
+    }// ÖRN 2 ADET PRODUCT1 1 ADET PRODUCT2
+    const productIds = Array.from(merged.keys()); // P1 VE P2 IDLERINI VERİYOR
 
     const order = await this.dataSource.transaction(async (manager) => {
       const products = await manager
@@ -42,9 +42,9 @@ export class OrdersService {
         .createQueryBuilder('p')
         .setLock('pessimistic_write')
         .where('p.id IN (:...ids)', { ids: productIds })
-        .getMany();
+        .getMany(); // product listesine git ilgili id lerdeki ürünleri dön
 
-      if (products.length !== productIds.length) {
+      if (products.length !== productIds.length) { //siparişteki ürün çeşit sayısı ile dönen product listesi sayısının kontrlü
         const found = new Set(products.map((p) => p.id));
         const missing = productIds.filter((id) => !found.has(id));
         throw new NotFoundException(`Products not found: ${missing.join(', ')}`);
@@ -52,25 +52,25 @@ export class OrdersService {
 
       for (const p of products) {
         const qty = merged.get(p.id) ?? 0;
-        if (p.stock < qty) {
+        if (p.stock < qty) { //PRODUCT STOK SAYISI SIPARISTEKI STOKDAN KUCUK MUU
           throw new BadRequestException(
             `Insufficient stock for SKU ${p.sku}: requested ${qty}, available ${p.stock}`,
           );
         }
       }
 
-      for (const p of products) {
+      for (const p of products) { //STOK AZALT
         const qty = merged.get(p.id) ?? 0;
         p.stock = p.stock - qty;
       }
-      await manager.getRepository(Product).save(products);
+      await manager.getRepository(Product).save(products); //PRODUCT LISTESINI GUNCELLE
 
-      const user = await manager.getRepository(User).findOne({ where: { id: dto.userId } });
+      const user = await manager.getRepository(User).findOne({ where: { id: dto.userId } }); //USER VAR MI 
       if (!user) {
         throw new NotFoundException(`User with ID ${dto.userId} not found`);
       }
 
-      const order = manager.getRepository(Order).create({
+      const order = manager.getRepository(Order).create({ //SIPARIS AÇ 
         status: OrderStatus.CREATED,
         totalAmount: 0,
         userId: user.id,
@@ -80,16 +80,16 @@ export class OrdersService {
 
       let total = 0;
       for (const p of products) {
-        const qty = merged.get(p.id) ?? 0;
-        const unitPrice = Number(p.price);
+        const qty = merged.get(p.id) ?? 0; //SIPARISTEKI ITEMIN ADEDI
+        const unitPrice = Number(p.price); //BIRIM FIYATI
         if (Number.isNaN(unitPrice)) {
           throw new BadRequestException(`Invalid price for product SKU ${p.sku}`);
         }
 
-        const lineTotal = Number((unitPrice * qty).toFixed(2));
-        total += lineTotal;
+        const lineTotal = Number((unitPrice * qty).toFixed(2)); //ÇARP
+        total += lineTotal; //TOTELE EKLE
 
-        const oi = manager.getRepository(OrderItem).create({
+        const oi = manager.getRepository(OrderItem).create({ //ORDER ITEM OLUSTUR 
           productId: p.id,
           sku: p.sku,
           name: p.name,
@@ -97,15 +97,15 @@ export class OrdersService {
           quantity: qty,
           lineTotal,
         });
-        order.items.push(oi);
+        order.items.push(oi); //ORDERE ITEMI KOY
       }
 
-      order.totalAmount = Number(total.toFixed(2));
-      return manager.getRepository(Order).save(order);
+      order.totalAmount = Number(total.toFixed(2)); //YUKARDAKI FOR TOPLAM TOTALAMOUNTA YAZ
+      return manager.getRepository(Order).save(order); //BITIR
     });
 
     // outbox yok (best-effort)
-    await this.publisher.publishToQueue('orders.created', {
+    await this.publisher.publishToQueue('orders.created', { //RABITMQ YA HABER VERIYOR 
       orderId: order.id,
       status: order.status,
       totalAmount: order.totalAmount,
@@ -134,39 +134,39 @@ export class OrdersService {
 
   async delete(id: string) {
     const result = await this.dataSource.transaction(async (manager) => {
-      const order = await manager.getRepository(Order).findOne({
+      const order = await manager.getRepository(Order).findOne({ //ORDER LISTESINDE SIPARISI BUL
         where: { id },
         relations: { items: true },
       });
       if (!order) throw new NotFoundException('Order not found');
-      if (order.deletedAt) return { success: true };
+      if (order.deletedAt) return { success: true }; //ZATEN SILINMIŞSE AŞAĞI GİRMEZ
 
-      const items = order.items ?? [];
-      const productIds = items.map((i) => i.productId);
+      const items = order.items ?? []; //ITEMLERI ÇEK
+      const productIds = items.map((i) => i.productId); //ITEMLERIN PRODUCTID LERINI AL 
 
       if (productIds.length) {
         const products = await manager
           .getRepository(Product)
           .createQueryBuilder('p')
           .setLock('pessimistic_write')
-          .where('p.id IN (:...ids)', { ids: productIds })
+          .where('p.id IN (:...ids)', { ids: productIds }) //ıtemdekı product ıd lerdekı productları dön
           .getMany();
 
-        const byId = new Map(products.map((p) => [p.id, p]));
-        for (const item of items) {
-          const p = byId.get(item.productId);
-          if (p) p.stock += item.quantity;
+        const byId = new Map(products.map((p) => [p.id, p])); //product listesini byId ye ekliyor
+        for (const item of items) { //itemler
+          const p = byId.get(item.productId); //byId deki her id için item listesindeki productu bul
+          if (p) p.stock += item.quantity; //böylece p stoğunu itemdeki kadar atrırır
         }
         await manager.getRepository(Product).save(products);
       }
 
-      order.status = OrderStatus.CANCELLED;
+      order.status = OrderStatus.CANCELLED; //REPOYU GUNCELLIYOR
       await manager.getRepository(Order).save(order);
       await manager.getRepository(Order).softRemove(order);
       return { success: true };
     });
 
-    await this.publisher.publishToQueue('orders.cancelled', {
+    await this.publisher.publishToQueue('orders.cancelled', { //RABBITE HABER EDIYOR
       orderId: id,
       status: OrderStatus.CANCELLED,
       cancelledAt: new Date().toISOString(),

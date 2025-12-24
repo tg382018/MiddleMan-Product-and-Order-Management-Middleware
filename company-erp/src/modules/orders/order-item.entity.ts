@@ -1,40 +1,40 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { Order } from './order.entity';
+  import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    Index,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+  } from 'typeorm';
+  import { Order } from './order.entity';
 
-@Entity('order_items')
-export class OrderItem {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @Entity('order_items')
+  export class OrderItem { // ORDERIN İÇERİSİNDEKİ 1 SATIR
+    @PrimaryGeneratedColumn('uuid')
+    id: string;
 
-  @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
-  order: Order;
+    @ManyToOne(() => Order, (order) => order.items, { onDelete: 'CASCADE' })
+    order: Order;
 
-  @Index()
-  @Column({ type: 'uuid' })
-  productId: string;
+    @Index()
+    @Column({ type: 'uuid' })
+    productId: string;
 
-  @Column()
-  sku: string;
+    @Column()
+    sku: string;
 
-  @Column()
-  name: string;
+    @Column()
+    name: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
-  unitPrice: number;
+    @Column('decimal', { precision: 12, scale: 2 })
+    unitPrice: number;
 
-  @Column('int')
-  quantity: number;
+    @Column('int')
+    quantity: number;
 
-  @Column('decimal', { precision: 12, scale: 2 })
-  lineTotal: number;
+    @Column('decimal', { precision: 12, scale: 2 })
+    lineTotal: number;
 
-  @CreateDateColumn()
-  createdAt: Date;
-}
+    @CreateDateColumn()
+    createdAt: Date;
+  }

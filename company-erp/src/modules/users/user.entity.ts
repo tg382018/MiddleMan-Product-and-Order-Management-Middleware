@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Order, ShippingAddress } from '../orders/order.entity';
+import { Order, ShippingAddress } from '../orders/order.entity'; // diğer entityleri importluyoruz ilişki için
 
 @Entity('users')
 export class User {
@@ -23,7 +23,7 @@ export class User {
   @Column({ type: 'jsonb' })
   address: ShippingAddress;
 
-  @OneToMany(() => Order, (order) => order.user)
+  @OneToMany(() => Order, (order) => order.user) //birden çok sipariş 1 usere 
   orders: Order[];
 
   @CreateDateColumn()

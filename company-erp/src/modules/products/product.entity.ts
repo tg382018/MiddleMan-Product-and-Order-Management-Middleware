@@ -7,7 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-@Entity('products')
+@Entity('products') //decorator bilgi verici
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -24,7 +24,7 @@ export class Product {
   @Column('int')
   stock: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 2 })//10 HANE VİRGULDEN SONRA 2 HANE
   price: number;
 
   @Column({ nullable: true })
