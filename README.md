@@ -1,3 +1,5 @@
+![Scheme](readme/genelsema.png)
+
 # MiddleMan - Product & Order Management Middleware
 
 MiddleMan is a distributed middleware ecosystem designed to synchronize and manage products and orders between a **Company ERP**, a central **Middleware**, and a **Logistics** system. It provides real-time data flow, automated background synchronization, and a sleek modern dashboard for monitoring operations.
