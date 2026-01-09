@@ -82,19 +82,4 @@ Track orders sent to logistics and manage their status updates.
 
 ---
 
-## 📂 Project Structure
 
-```text
-├── company-erp      # NestJS ERP Service (Source of Truth)
-├── middleware       # Central Middleware
-│   ├── api          # NestJS Core API (Redis, RabbitMQ, DB)
-│   └── web          # Next.js Dashboard (React 19, Tailwind 4)
-├── logistics        # Logistics System
-│   ├── api          # NestJS Logistics Service
-│   └── web          # Next.js Logistics Dashboard
-├── readme           # Project Media & Assets
-└── docker-compose.yml # Full Stack Orchestration
-```
-
----
-*Developed with ❤️ as a robust middleware solution.*
