@@ -9,7 +9,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  list(@Query() query: ListProductsQueryDto) {
+  list(@Query() query: ListProductsQueryDto) { //search parametrelerini dto ile doğrulayıp service gönderir
     return this.productsService.list({
       page: query.page ?? 1,
       limit: query.limit ?? 20,

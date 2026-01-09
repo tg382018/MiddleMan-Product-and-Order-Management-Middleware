@@ -43,21 +43,20 @@ export class ProductsRepository {
     return this.repo.save(existing);
   }
 
-  async findPaged(params: { page: number; limit: number; search?: string }) {
+  async findPaged(params: { page: number; limit: number; search?: string }) { //searh parameretleri aldı iphone,20 kayıt getir,veya ikinci sayfa
     const { page, limit, search } = params;
-    const skip = (page - 1) * limit;
-
+    const skip = (page - 1) * limit;  
     const where = search
       ? [
-        { sku: ILike(`%${search}%`), erpDeletedAt: null },
-        { name: ILike(`%${search}%`), erpDeletedAt: null },
+        { sku: ILike(`%${search}%`), erpDeletedAt: null }, //içinde search kelimesi geçen sku lulardan silinmemiş olanlar
+        { name: ILike(`%${search}%`), erpDeletedAt: null },//içinde search kelimesi geçen name lulardan silinmemiş olanlar
       ]
       : { erpDeletedAt: null };
 
     const [items, total] = await this.repo.findAndCount({
       where: where as any,
       order: { erpUpdatedAt: 'DESC' },
-      take: limit,
+      take: limit, //20 kayıt al
       skip,
     });
 

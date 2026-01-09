@@ -22,13 +22,13 @@ export class OrdersService {
   }
 
   async listLogisticsWaiting(params: { page: number; limit: number; search?: string }) {
-    return this.repo.findPaged({ ...params, stage: MwOrderStage.LOGISTICS });
+    return this.repo.findPaged({ ...params, stage: MwOrderStage.LOGISTICS }); //LOJISTIGE GONDERILMEYI BEKLEYEN 
   }
 
   async sendToLogistics(mwOrderId: string) {
-    const updated = await this.repo.sendToLogistics(mwOrderId);
+    const updated = await this.repo.sendToLogistics(mwOrderId); //SEND LOGISTIC
     if (updated) {
-      await this.logisticsService.publishOrderToLogistics(mwOrderId);
+      await this.logisticsService.publishOrderToLogistics(mwOrderId);//RABBITMQ 
       return { ok: true };
     }
     return { ok: false, reason: 'ORDER_NOT_FOUND' };
